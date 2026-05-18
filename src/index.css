@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CDC 12.2 - Accessibilité WCAG 2.1 AA */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Poppins', 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* Contraste AA CDC 12.2 */
+  body {
+    @apply bg-blanc-casse text-gris-anthracite;
+  }
+
+  /* Navigation clavier CDC 12.2 */
+  *:focus-visible {
+    @apply outline-2 outline-turquoise-gac outline-offset-2;
+  }
+}
+
+/* Feedback utilisateur CDC 12.2 */
+@layer components {
+  .btn-gac {
+    @apply bg-gac-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-gac-dark transition-colors font-heading;
+  }
+
+  .toast-success {
+    @apply bg-green-50 border-l-4 border-gac-primary text-green-800 p-4;
+  }
+
+  .toast-error {
+    @apply bg-red-50 border-l-4 border-red-500 text-red-800 p-4;
+  }
+}
