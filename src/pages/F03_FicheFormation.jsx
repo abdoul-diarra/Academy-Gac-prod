@@ -88,13 +88,9 @@ export default function F03_FicheFormation() {
 
     function handleInscription() {
         if (!session) return
-
-        if (!user) {
-            localStorage.setItem('pending_session_id', session.id)
-            navigate('/connexion')
-        } else {
-            navigate(`/formation/${id}/inscription/${session.id}`)
-        }
+        const redirectUrl = `/formation/${id}/inscription/${session.id}`
+        localStorage.setItem('redirectAfterLogin', redirectUrl)
+        navigate('/connexion')
     }
 
     function formatDate(dateString) {

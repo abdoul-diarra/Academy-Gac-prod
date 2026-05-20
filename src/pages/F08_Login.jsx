@@ -26,7 +26,7 @@ export default function F08_Login() {
             const pendingSession = localStorage.getItem('pending_session_id')
             if (pendingSession) {
                 localStorage.removeItem('pending_session_id')
-                navigate(`/formation/${pendingSession}/inscription `)
+                navigate(`/formation/${pendingSession}/inscription`)
             } else {
                 navigate(from)
             }
@@ -48,12 +48,15 @@ export default function F08_Login() {
             ? `/formation/${pendingSession}/inscription `
             : '/dashboard'
 
-        localStorage.setItem('redirectAfterLogin', targetUrl)
+        localStorage.setItem('redirectAfterLogin', localStorage.getItem('redirectAfterLogin') || '/dashboard')
 
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: `${window.location.origin}/auth/callback`
+                redirectTo: `${window.location.origin}/auth/callback`,
+                queryParams: {
+                    prompt: 'select_account' // force le choix du compte
+                }
             }
         })
 

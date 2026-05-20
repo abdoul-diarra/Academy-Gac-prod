@@ -8,7 +8,8 @@ export default function F16_AuthCallback() {
 
     useEffect(() => {
         const handleAuthCallback = async () => {
-            const { data: { session }, error } = await supabase.auth.getSession()
+            // Attend que Supabase traite le hash dans l'URL
+            const { data, error } = await supabase.auth.getSession()
 
             if (error) {
                 console.error('Erreur auth callback:', error)
@@ -16,7 +17,8 @@ export default function F16_AuthCallback() {
                 return
             }
 
-            if (!session) {
+            // Si pas de session fraîche après OAuth, on redirige vers login
+            if (!data.session) {
                 navigate('/connexion')
                 return
             }
@@ -27,26 +29,25 @@ export default function F16_AuthCallback() {
 
             // Si on vient d'une page inscription, vérifie si l'user est déjà inscrit
             if (redirectUrl.includes('/inscription')) {
-                const sessionId = redirectUrl.split('/formation/')[1]?.split('/inscription')[0]
+                const match = redirectUrl.match(/\/formation\/[^/]+\/inscription\/([^/]+)/)
+                const sessionId = match ? match[1] : null
 
                 if (sessionId) {
                     const { data: inscription } = await supabase
                         .from('inscriptions')
                         .select('id, statut')
-                        .eq('user_id', session.user.id)
+                        .eq('user_id', data.session.user.id)
                         .eq('session_id', sessionId)
                         .maybeSingle()
 
-                    // Pas d'inscription ou annulée → on garde la redirection vers le formulaire
                     if (!inscription || inscription.statut === 'annulee') {
-                        navigate(redirectUrl)
+                        navigate(redirectUrl, { replace: true })
                         return
                     }
                 }
             }
 
-            // Sinon go dashboard ou autre page prévue
-            navigate(redirectUrl)
+            navigate(redirectUrl, { replace: true })
         }
 
         handleAuthCallback()
