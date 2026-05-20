@@ -29,7 +29,6 @@ import F17_Confirmation from './pages/F17_Confirmation'
 import F18_Inscription from './pages/F18_Inscription'
 import ProtectedRoute from './components/ProtectedRoute'
 
-
 function App() {
   return (
     <BrowserRouter>
@@ -61,27 +60,35 @@ function App() {
           <ProtectedRoute><F13_Paiements /></ProtectedRoute>
         } />
 
-        {/* Salle virtuelle : protégée par décharge, pas par login */}
-        <Route path="/salle-virtuelle/:numeroDecharge" element={<F11_SalleVirtuelle />} />
+        {/* Salle virtuelle : protégée par login + vérifie le numeroDecharge côté page */}
+        <Route path="/salle-virtuelle/:numeroDecharge" element={
+          <ProtectedRoute><F11_SalleVirtuelle /></ProtectedRoute>
+        } />
 
         {/* 3. Routes Admin F14-F15 - Protégées Admin */}
         <Route path="/f14-admin" element={
-          <F14_AdminDashboard />
+          <ProtectedRoute requireAdmin={true}><F14_AdminDashboard /></ProtectedRoute>
         } />
         <Route path="/admin/formations" element={
           <ProtectedRoute requireAdmin={true}><F15_AdminFormations /></ProtectedRoute>
         } />
 
-        {/* 4. Routes Processus Inscription */}
-        <Route path="/formation/:id/inscription" element={<F18_Inscription />} />
-        <Route path="/confirmation/:id" element={<F17_Confirmation />} />
+        {/* 4. Routes Processus Inscription - Protégées */}
+        <Route path="/formation/:formationId/inscription/:sessionId" element={
+          <ProtectedRoute><F18_Inscription /></ProtectedRoute>
+        } />
+        <Route path="/confirmation/:id" element={
+          <ProtectedRoute><F17_Confirmation /></ProtectedRoute>
+        } />
+
+        {/* Route /inscription sans id ne sert à rien, on redirige vers catalogue */}
+        <Route path="/inscription" element={<Navigate to="/formations" replace />} />
 
         {/* 5. Auth Callback OAuth */}
         <Route path="/auth/callback" element={<F16_AuthCallback />} />
 
         {/* 6. 404 - TOUJOURS en dernier */}
         <Route path="*" element={<Navigate to="/" replace />} />
-
       </Routes>
 
       <Footer />

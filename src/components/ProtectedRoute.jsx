@@ -5,12 +5,18 @@ import { Loader2 } from 'lucide-react'
 
 export default function ProtectedRoute({ children, requireAdmin = false }) {
     const [loading, setLoading] = useState(true)
-    const [authState, setAuthState] = useState('checking') // checking | authed | not_authed | not_admin
+    const [authState, setAuthState] = useState('checking')
     const location = useLocation()
 
     useEffect(() => {
         checkAuth()
-    }, [requireAdmin])
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            checkAuth()
+        })
+
+        return () => subscription.unsubscribe()
+    }, [requireAdmin, location.pathname])
 
     const checkAuth = async () => {
         setLoading(true)
@@ -23,7 +29,6 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
             return
         }
 
-        // Si admin requis, vérifie le rôle
         if (requireAdmin) {
             const { data: profile, error } = await supabase
                 .from('profiles')

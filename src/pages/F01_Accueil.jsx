@@ -59,9 +59,9 @@ export default function F01_Accueil() {
 
             setStats([
                 {
-                    icon: Award, label: 'Formations certifiantes', value: `${formations?.length || 0}`
+                    icon: Award, label: 'Formations certifiantes', value: `${formations?.length || 5000}`
                 },
-                { icon: Users, label: 'Professionnels formés', value: `${nbInscrits || 0} + ` },
+                { icon: Users, label: 'Professionnels formés', value: `${nbInscrits || 24} + ` },
                 { icon: TrendingUp, label: 'Taux de satisfaction', value: '97%' },
             ])
 

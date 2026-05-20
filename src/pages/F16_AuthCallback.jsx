@@ -7,47 +7,57 @@ export default function F16_AuthCallback() {
     const navigate = useNavigate()
 
     useEffect(() => {
-        let subscription // déclare-le ici pour y avoir accès partout
+        const handleAuthCallback = async () => {
+            const { data: { session }, error } = await supabase.auth.getSession()
 
-        const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-            subscription = data.subscription // récupère la sub
-
-            if (event === 'SIGNED_IN' && session) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', session.user.id)
-                    .single()
-
-                const redirectTo = localStorage.getItem('redirectAfterLogin') || '/f14-admin'
-                localStorage.removeItem('redirectAfterLogin')
-
-                if (redirectTo === '/f14-admin' && profile?.role !== 'admin') {
-                    navigate('/dashboard', { replace: true })
-                } else {
-                    navigate(redirectTo, { replace: true })
-                }
-
-                subscription.unsubscribe()
+            if (error) {
+                console.error('Erreur auth callback:', error)
+                navigate('/connexion')
+                return
             }
-        })
 
-        // Fallback si rien ne se passe en 5s
-        const timeout = setTimeout(() => {
-            subscription?.unsubscribe()
-            navigate('/connexion', { replace: true })
-        }, 5000)
+            if (!session) {
+                navigate('/connexion')
+                return
+            }
 
-        return () => {
-            clearTimeout(timeout)
-            subscription?.unsubscribe()
+            const redirectUrl = localStorage.getItem('redirectAfterLogin') || '/dashboard'
+            localStorage.removeItem('redirectAfterLogin')
+            localStorage.removeItem('pending_session_id')
+
+            // Si on vient d'une page inscription, vérifie si l'user est déjà inscrit
+            if (redirectUrl.includes('/inscription')) {
+                const sessionId = redirectUrl.split('/formation/')[1]?.split('/inscription')[0]
+
+                if (sessionId) {
+                    const { data: inscription } = await supabase
+                        .from('inscriptions')
+                        .select('id, statut')
+                        .eq('user_id', session.user.id)
+                        .eq('session_id', sessionId)
+                        .maybeSingle()
+
+                    // Pas d'inscription ou annulée → on garde la redirection vers le formulaire
+                    if (!inscription || inscription.statut === 'annulee') {
+                        navigate(redirectUrl)
+                        return
+                    }
+                }
+            }
+
+            // Sinon go dashboard ou autre page prévue
+            navigate(redirectUrl)
         }
+
+        handleAuthCallback()
     }, [navigate])
 
     return (
-        <div className="min-h-screen flex items-center justify-center">
-            <Loader2 className="animate-spin text-[#1FA9A2]" size={32} />
-            <p className="ml-3 text-gray-600">Connexion en cours...</p>
+        <div className="min-h-screen flex items-center justify-center bg-[#F8FAF9]">
+            <div className="text-center">
+                <Loader2 size={40} className="animate-spin text-[#1FA9A2] mx-auto mb-4" />
+                <p className="text-gray-600">Connexion en cours...</p>
+            </div>
         </div>
     )
 }

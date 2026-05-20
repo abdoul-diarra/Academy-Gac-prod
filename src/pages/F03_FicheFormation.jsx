@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Loader2, Calendar, Clock, MapPin, Users, ArrowLeft, AlertCircle, CheckCircle, Shield, Award } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth' // Ajoute ça
+import { useAuth } from '../hooks/useAuth'
 
 const POLES_COLORS = {
     'policy-impact-lab': '#8DC63F',
@@ -23,7 +23,7 @@ const POLES_LABEL = {
 export default function F03_FicheFormation() {
     const { id } = useParams()
     const navigate = useNavigate()
-    const { user } = useAuth() // Récupère l'user connecté
+    const { user } = useAuth()
 
     const [formation, setFormation] = useState(null)
     const [session, setSession] = useState(null)
@@ -56,17 +56,29 @@ export default function F03_FicheFormation() {
 
             const { data: sessionData } = await supabase
                 .from('sessions')
-                .select('*')
-                .eq('formation_id', formationData.id)
+                .select(`
+                    id,
+                    formation_id,
+                    date_debut,
+                    date_fin,
+                    capacite_max,
+                    statut,
+                    lien_zoom,
+                    inscriptions!session_id(count),
+                    formations!inner(duree_heures, prix_fcfa, appellation_commerciale)
+                `)
+                .eq('formation_id', id)
                 .eq('statut', 'ouverte')
                 .gte('date_debut', new Date().toISOString())
                 .order('date_debut', { ascending: true })
                 .limit(1)
-                .single()
 
-            setSession(sessionData)
+            const session = sessionData?.[0]
+            if (session) {
+                session.places_disponibles = session.capacite_max - (session.inscriptions?.[0]?.count || 0)
+            }
+            setSession(session)
             setLoading(false)
-
         } catch (err) {
             console.error(err)
             setError('Erreur de chargement')
@@ -78,12 +90,10 @@ export default function F03_FicheFormation() {
         if (!session) return
 
         if (!user) {
-            // Pas connecté : on stocke l'ID de session et on va au login
             localStorage.setItem('pending_session_id', session.id)
             navigate('/connexion')
         } else {
-            // Déjà connecté : direct vers l'inscription
-            navigate(`/formation/${session.id} / inscription`)
+            navigate(`/formation/${id}/inscription/${session.id}`)
         }
     }
 
@@ -113,7 +123,7 @@ export default function F03_FicheFormation() {
     if (error) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-                <div className="bg-white border-red-200 border rounded-2xl p-8 max-w-md w-full shadow-xl">
+                <div className="bg-white border-red-200 rounded-2xl p-8 max-w-md w-full shadow-lg">
                     <div className="flex items-center gap-3 mb-4">
                         <AlertCircle size={28} className="text-red-600" />
                         <h2 className="text-2xl font-bold text-[#0F3D3E]">Oups!</h2>
@@ -133,11 +143,9 @@ export default function F03_FicheFormation() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-
-            {/* HEADER HERO */}
             <div className="relative overflow-hidden" style={{ backgroundColor: poleColor }}>
-                <div className="absolute inset-0 bg-black/20"></div>
-                <div className="relative max-w-6xl mx-auto px-4 py-8">
+                <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/10"></div>
+                <div className="relative max-w-6xl mx-auto px-4 py-12 md:py-16">
                     <Link
                         to="/formations"
                         className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-6 transition-all hover:gap-3"
@@ -148,21 +156,21 @@ export default function F03_FicheFormation() {
 
                     <div className="max-w-3xl">
                         <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-sm text-white text-sm font-bold rounded-full mb-4 uppercase tracking-wider">
-                            {POLES_LABEL[formation.code_pole] || formation.mode_formation}
+                            {POLES_LABEL[formation?.code_pole] || formation?.mode_formation}
                         </span>
 
-                        <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
+                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
                             {formation.appellation_commerciale}
                         </h1>
 
-                        <p className="text-lg text-white/90 mb-6">
+                        <p className="text-lg md:text-xl text-white/90 mb-6 leading-relaxed">
                             {formation.titre_pedagogique}
                         </p>
 
-                        <div className="flex flex-wrap gap-6 text-white/90">
+                        <div className="flex flex-wrap gap-4 md:gap-6 text-white/90">
                             <div className="flex items-center gap-2">
                                 <Clock size={20} />
-                                <span className="font-medium">{formation.duree_heures}h</span>
+                                <span className="font-medium">{session?.formations?.[0]?.prix_fcfa?.toLocaleString('fr-FR') || formation?.prix_fcfa?.toLocaleString('fr-FR') || 0}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Users size={20} />
@@ -177,22 +185,17 @@ export default function F03_FicheFormation() {
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-4 py-12">
+            <div className="max-w-6xl mx-auto px-4 py-12 md:py-16">
                 <div className="grid lg:grid-cols-3 gap-8">
-
-                    {/* COLONNE GAUCHE */}
                     <div className="lg:col-span-2 space-y-6">
-
-                        {/* DESCRIPTION */}
-                        <div className="bg-white rounded-2xl shadow-sm border-gray-100 p-8">
+                        <div className="bg-white rounded-2xl shadow-sm border-gray-100 p-6 md:p-8">
                             <h2 className="text-2xl font-bold text-[#0F3D3E] mb-4">À propos de cette formation</h2>
-                            <p className="text-gray-700 leading-relaxed">
+                            <p className="text-gray-700 leading-relaxed text-lg">
                                 {formation.description || 'Formation certifiante dispensée par des experts GAC'}
                             </p>
                         </div>
 
-                        {/* OBJECTIFS */}
-                        <div className="bg-white rounded-2xl shadow-sm border-gray-100 p-8">
+                        <div className="bg-white rounded-2xl shadow-sm border-gray-100 p-6 md:p-8">
                             <h2 className="text-2xl font-bold text-[#0F3D3E] mb-4 flex items-center gap-2">
                                 <CheckCircle size={24} className="text-[#8DC63F]" />
                                 Objectifs pédagogiques
@@ -202,19 +205,17 @@ export default function F03_FicheFormation() {
                             </div>
                         </div>
 
-                        {/* PROGRAMME */}
-                        <div className="bg-white rounded-2xl shadow-sm border-gray-100 p-8">
+                        <div className="bg-white rounded-2xl shadow-sm border-gray-100 p-6 md:p-8">
                             <h2 className="text-2xl font-bold text-[#0F3D3E] mb-4 flex items-center gap-2">
                                 <Award size={24} className="text-[#1FA9A2]" />
                                 Programme détaillé
                             </h2>
                             <div className="text-gray-700 whitespace-pre-line leading-relaxed">
-                                {formation.programme || 'Programme détaillé disponible sur demande. Contactez-nous pour recevoir le syllabus complet.'}
+                                {formation.programme || 'Programme détaillé disponible sur demande.'}
                             </div>
                         </div>
 
-                        {/* GARANTIES */}
-                        <div className="bg-gradient-to-r from-[#0F3D3E] to-[#1FA9A2] rounded-2xl p-8 text-white">
+                        <div className="bg-gradient-to-r from-[#0F3D3E] to-[#1FA9A2] rounded-2xl p-6 md:p-8 text-white shadow-lg">
                             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                                 <Shield size={24} />
                                 Pourquoi faire confiance à GAC?
@@ -240,14 +241,12 @@ export default function F03_FicheFormation() {
                         </div>
                     </div>
 
-                    {/* COLONNE DROITE : CARTE INSCRIPTION */}
                     <div className="lg:col-span-1">
-                        <div className="bg-white rounded-2xl shadow-xl border-gray-100 p-8 sticky top-6">
-
-                            <div className="text-center mb-6 pb-6 border-b-gray-100">
+                        <div className="bg-white rounded-2xl shadow-xl border-gray-100 p-6 md:p-8 sticky top-6">
+                            <div className="text-center mb-6 pb-6 border-b border-gray-100">
                                 <p className="text-sm text-gray-600 mb-2">Investissement formation</p>
                                 <p className="text-4xl font-bold text-[#0F3D3E]">
-                                    {formation.prix_fcfa?.toLocaleString('fr-FR')}
+                                    {session?.formations?.[0]?.prix_fcfa?.toLocaleString('fr-FR') || formation?.prix_fcfa?.toLocaleString('fr-FR') || 0}
                                     <span className="text-xl font-normal"> FCFA</span>
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">TTC - Paiement en 1 fois</p>
@@ -271,7 +270,7 @@ export default function F03_FicheFormation() {
                                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg">
                                     <p className="text-sm text-yellow-800 font-medium">
                                         Aucune session ouverte pour le moment.
-                                        <Link to="/contact" className="underline ml-1">Contacte-nous</Link> pour être alerté.
+                                        <Link to="/contact" className="underline ml-1 hover:text-yellow-900">Contacte-nous</Link> pour être alerté.
                                     </p>
                                 </div>
                             )}
@@ -279,12 +278,12 @@ export default function F03_FicheFormation() {
                             <button
                                 onClick={handleInscription}
                                 disabled={!session}
-                                className="w-full bg-[#8DC63F] text-[#0F3D3E] py-4 rounded-xl font-bold text-lg hover:bg-[#7AB836] transition-all hover:scale-[1.02] shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                className="w-full bg-[#8DC63F] text-[#0F3D3E] py-4 rounded-xl font-bold text-lg hover:bg-[#7AB836] transition-all hover:scale-[1.02] shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:scale-100 active:scale-98"
                             >
                                 S'inscrire maintenant
                             </button>
 
-                            <div className="mt-6 pt-6 border-t-gray-100 space-y-3 text-sm text-gray-600">
+                            <div className="mt-6 pt-6 border-t border-gray-100 space-y-3 text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
                                     <Shield size={16} className="text-[#8DC63F]" />
                                     <span>Paiement sécurisé Wave / Orange Money</span>
