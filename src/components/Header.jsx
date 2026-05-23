@@ -8,6 +8,7 @@ export default function Header() {
     const links = [
         { to: '/', label: 'Accueil' },
         { to: '/formations', label: 'Formations' },
+        { to: '/promotion', label: 'Promotion' },
         { to: '/a-propos', label: 'À propos' },
         { to: '/blog', label: 'Blog' },
         { to: '/contact', label: 'Contact' },

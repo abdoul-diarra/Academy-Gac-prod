@@ -23,5 +23,10 @@ export default {
       }
     },
   },
+
   plugins: [],
+  fontFamily: {
+    'serif': ['Playfair Display', 'serif'],
+    'sans': ['Inter', 'sans-serif']
+  }
 }

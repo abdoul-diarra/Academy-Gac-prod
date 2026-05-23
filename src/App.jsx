@@ -28,6 +28,8 @@ import F16_AuthCallback from './pages/F16_AuthCallback'
 import F17_Confirmation from './pages/F17_Confirmation'
 import F18_Inscription from './pages/F18_Inscription'
 import ProtectedRoute from './components/ProtectedRoute'
+import Promotion from './pages/Promotion' // nom du fichier changé
+
 
 function App() {
   return (
@@ -45,7 +47,7 @@ function App() {
         <Route path="/contact" element={<F07_Contact />} />
         <Route path="/connexion" element={<F08_Login />} />
         <Route path="/login" element={<Navigate to="/connexion" replace />} />
-
+        <Route path="/promotion" element={<Promotion />} />
         {/* 2. Routes Apprenant F09-F13 - Protégées */}
         <Route path="/dashboard" element={
           <ProtectedRoute><F09_Dashboard /></ProtectedRoute>

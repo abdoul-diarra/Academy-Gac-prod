@@ -75,39 +75,90 @@ export default function F17_Confirmation() {
 
         setGenerating(true)
         try {
+            const fileName = `${decharge.numero_decharge}.pdf`
+
+            // 1. Supprime l'ancien fichier pour forcer l'écrasement
+            await supabase.storage.from('decharges').remove([fileName])
+
+            // 2. Génère le PDF avec le texte complet
             const doc = new jsPDF()
-            doc.setFontSize(18)
-            doc.text('DÉCHARGE DE RESPONSABILITÉ', 105, 30, { align: 'center' })
-            doc.setFontSize(12)
-            doc.text(`Je soussigné(e) ${inscription.prenom_contact} ${inscription.nom_contact},`, 20, 60)
-            doc.text(`confirme mon inscription à la formation ${inscription.session.formation.appellation_commerciale}.`, 20, 70)
-            doc.text(`N° Décharge : ${decharge.numero_decharge}`, 20, 90)
-            doc.text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, 20, 100)
+            const dateStr = new Date().toLocaleDateString('fr-FR')
+
+            const texte = `
+DÉCHARGE DE RESPONSABILITÉ
+
+Nous, GAC Academy, dont le siège est à Thiès, Sénégal,
+
+Attestons que ${inscription.prenom_contact} ${inscription.nom_contact} s’est inscrit(e)
+à la formation "${inscription.session.formation.appellation_commerciale}".
+
+L’étudiant(e) reconnaît avoir pris connaissance du programme, des conditions d’inscription
+et du règlement intérieur de GAC Academy.
+
+Par la présente, l’étudiant(e) décharge GAC Academy de toute responsabilité concernant
+les accidents, pertes ou dommages survenant en dehors du fait direct de GAC Academy.
+
+L’étudiant(e) s’engage à respecter les consignes de sécurité et de conduite durant la formation.
+Cette décharge est signée avant le démarrage de la session.
+
+L’étudiant(e) confirme avoir reçu toutes les informations nécessaires concernant le déroulement
+de la formation, les horaires, et les prérequis techniques le cas échéant.
+Il/elle s’engage à utiliser le matériel mis à disposition avec soin et à respecter les règles
+de confidentialité relatives aux supports de cours et aux données partagées.
+GAC Academy se réserve le droit de modifier le planning en cas de force majeure,
+en informant les participants dans les meilleurs délais.
+La présente décharge est valable pour l’intégralité de la session et ne peut être modifiée
+qu’avec l’accord écrit des deux parties.
+
+N° Décharge : ${decharge.numero_decharge}
+Fait à Thiès, le ${dateStr}
+
+Signature de l’étudiant(e) Cachet & Signature GAC Academy
+            `.trim()
+
+            doc.setFontSize(16)
+            doc.text('DÉCHARGE DE RESPONSABILITÉ', 105, 25, { align: 'center' })
+            doc.setFontSize(11)
+            doc.setFont("helvetica", "normal")
+            const lignes = doc.splitTextToSize(texte, 170)
+            doc.text(lignes, 20, 45)
 
             const pdfBlob = doc.output('blob')
-            const fileName = `decharges/${inscription.user_id}/${decharge.id}.pdf`
 
+            // 3. Upload avec upsert
             const { error: uploadError } = await supabase.storage
                 .from('decharges')
-                .upload(fileName, pdfBlob, { upsert: true })
+                .upload(fileName, pdfBlob, {
+                    upsert: true,
+                    contentType: 'application/pdf'
+                })
 
             if (uploadError) throw uploadError
 
-            const { data: urlData } = supabase.storage
+            // 4. Récupère l'URL publique avec timestamp pour casser le cache
+            const { data: { publicUrl } } = supabase.storage
                 .from('decharges')
                 .getPublicUrl(fileName)
 
+            const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`
+
+            // 5. Update la DB
             const { error: updateError } = await supabase
                 .from('decharges')
-                .update({ url_pdf: urlData.publicUrl })
+                .update({
+                    url_pdf: urlWithTimestamp,
+                    statut: 'valide'
+                })
                 .eq('id', decharge.id)
 
             if (updateError) throw updateError
 
-            setDecharge({ ...decharge, url_pdf: urlData.publicUrl })
+            setDecharge({ ...decharge, url_pdf: urlWithTimestamp, statut: 'valide' })
+            alert('PDF régénéré avec succès')
+
         } catch (err) {
             console.error(err)
-            alert('Erreur lors de la génération du PDF')
+            alert('Erreur lors de la génération du PDF : ' + err.message)
         } finally {
             setGenerating(false)
         }
@@ -172,38 +223,35 @@ export default function F17_Confirmation() {
                                 </p>
                             </div>
 
-                            {profile?.role === 'admin' && !decharge.url_pdf ? (
-                                <button
-                                    onClick={generateAndUploadPDF}
-                                    disabled={generating}
-                                    className="inline-flex items-center gap-2 bg-[#1FA9A2] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0F3D3E] transition disabled:opacity-50"
-                                >
-                                    {generating ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
-                                    {generating ? 'Génération...' : 'Générer la décharge PDF'}
-                                </button>
-                            ) : decharge.url_pdf ? (
-                                <a
-                                    href={decharge.url_pdf}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 text-[#1FA9A2] hover:text-[#0F3D3E] font-semibold transition"
-                                >
-                                    <Download size={18} />
-                                    Télécharger la décharge PDF
-                                </a>
-                            ) : (
-                                <p className="text-sm text-gray-600">
-                                    En attente de génération par l'admin
-                                </p>
+                            {profile?.role === 'admin' && (
+                                <div className="flex flex-col gap-3 items-center">
+                                    <button
+                                        onClick={generateAndUploadPDF}
+                                        disabled={generating}
+                                        className="inline-flex items-center gap-2 bg-[#1FA9A2] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0F3D3E] transition disabled:opacity-50"
+                                    >
+                                        {generating ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
+                                        {generating ? 'Génération...' : decharge.url_pdf ? 'Régénérer la décharge PDF' : 'Générer la décharge PDF'}
+                                    </button>
+
+                                    {decharge.url_pdf && (
+                                        <a
+                                            href={decharge.url_pdf}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 text-[#1FA9A2] hover:text-[#0F3D3E] font-semibold transition"
+                                        >
+                                            <Download size={18} />
+                                            Télécharger la décharge PDF
+                                        </a>
+                                    )}
+                                </div>
                             )}
                         </div>
                     ) : (
                         <div className="bg-yellow-50 border-yellow-300 p-4 mb-6 rounded-lg">
                             <p className="text-[#0F3D3E] font-semibold">
                                 En attente de génération de la décharge
-                            </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Elle sera disponible sous 24h sur votre dashboard
                             </p>
                         </div>
                     )}

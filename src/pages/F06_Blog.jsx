@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, ArrowRight, Filter, Headphones, FileText, BarChart3 } from 'lucide-react'
+import { Clock, ArrowRight, Filter, Headphones, FileText, BarChart3, ExternalLink } from 'lucide-react'
 
 const POLES_COLOR = {
     'DATA SCIENCE FACTORY': '#8DC63F',
@@ -23,44 +23,99 @@ function F06_Blog() {
     const articles = [
         {
             id: 1,
-            titre: "5 erreurs Excel qui coûtent cher aux entreprises sénégalaises",
-            date: "10 mai 2026",
-            tag: "DATA SCIENCE FACTORY",
-            type: "Article",
-            excerpt: "Découvrez les erreurs les plus fréquentes qui faussent vos analyses et comment les éviter avec des formules simples.",
-            image: "https://via.placeholder.com/600x400/8DC63F/FFFFFF?text=Excel+Tips",
-            readTime: "5 min"
+            titre: "Les Échos de l'Éco #XX : Titre de la vidéo",
+            date: "22 mai 2026",
+            tag: "POLICY IMPACT LAB",
+            type: "Podcast",
+            excerpt: "Résumé court de la vidéo pour donner envie de cliquer. Change ça avec le vrai sujet de la vidéo.",
+            image: "https://img.youtube.com/vi/ZXkvIX37nrY/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/ZXkvIX37nrY"
         },
         {
             id: 2,
-            titre: "Les Échos de l'Éco #12 : Évaluation d'impact dans l'UEMOA",
-            date: "5 mai 2026",
+            titre: "Vidéo GAC #4",
+            date: "22 mai 2026",
+            tag: "ECONOMICS POWER HUB",
+            type: "Podcast",
+            excerpt: "Remplace par le résumé de la vidéo",
+            image: "https://img.youtube.com/vi/7S__44lwJEM/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/7S__44lwJEM"
+        },
+
+
+        {
+            id: 3,
+            titre: "Titre de la vidéo",
+            date: "22 mai 2026",
             tag: "POLICY IMPACT LAB",
             type: "Podcast",
-            excerpt: "On décortique les méthodes d'évaluation d'impact utilisées dans la zone UEMOA avec des cas concrets.",
-            image: "https://via.placeholder.com/600x400/1FA9A2/FFFFFF?text=Podcast",
-            readTime: "32 min"
+            excerpt: "Résumé court de la vidéo",
+            image: "https://img.youtube.com/vi/Vv4TUHMJ9RY/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/Vv4TUHMJ9RY"
+        },
+        {
+            id: 5,
+            titre: "Vidéo GAC #1",
+            date: "22 mai 2026",
+            tag: "POLICY IMPACT LAB",
+            type: "Podcast",
+            excerpt: "Remplace par le résumé de la vidéo",
+            image: "https://img.youtube.com/vi/y1c_onSU3zo/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/y1c_onSU3zo"
         },
         {
             id: 3,
-            titre: "Infographie : La chaîne PPBSE expliquée",
-            date: "1 mai 2026",
-            tag: "STRATEGY & DELIVERY",
-            type: "Infographie",
-            excerpt: "Planification, Programmation, Budgétisation, Suivi, Évaluation : visualisez le cycle complet en 1 image.",
-            image: "https://via.placeholder.com/600x400/0F3D3E/FFFFFF?text=Infographie",
-            readTime: "3 min"
+            titre: "Titre de la vidéo",
+            date: "22 mai 2026",
+            tag: "POLICY IMPACT LAB",
+            type: "Podcast",
+            excerpt: "Résumé court de la vidéo",
+            image: "https://img.youtube.com/vi/ty-K8SgqhQ8/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/ty-K8SgqhQ8"
         },
+
         {
-            id: 4,
-            titre: "Workshop gratuit : Power BI pour décideurs publics",
-            date: "28 avril 2026",
-            tag: "DATA SCIENCE FACTORY",
-            type: "Événement",
-            excerpt: "Rejoignez notre session live pour découvrir comment transformer vos données en dashboards actionnables.",
-            image: "https://via.placeholder.com/600x400/8DC63F/FFFFFF?text=Workshop",
-            readTime: "2h"
+            id: 6,
+            titre: "Vidéo GAC #3",
+            date: "22 mai 2026",
+            tag: "STRATEGY & DELIVERY",
+            type: "Podcast",
+            excerpt: "Remplace par le résumé de la vidéo",
+            image: "https://img.youtube.com/vi/Tkp5JtV1NhE/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/Tkp5JtV1NhE"
         },
+
+        {
+            id: 7,
+            titre: "Vidéo GAC #2",
+            date: "22 mai 2026",
+            tag: "DATA SCIENCE FACTORY",
+            type: "Podcast",
+            excerpt: "Remplace par le résumé de la vidéo",
+            image: "https://img.youtube.com/vi/6nVnz_uqCE8/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/6nVnz_uqCE8"
+        },
+
+        {
+            id: 8,
+            titre: "Titre de la vidéo",
+            date: "22 mai 2026",
+            tag: "POLICY IMPACT LAB",
+            type: "Podcast",
+            excerpt: "Résumé court de la vidéo",
+            image: "https://img.youtube.com/vi/oi3CBI8rP6U/maxresdefault.jpg",
+            readTime: "XX min",
+            youtubeLink: "https://youtu.be/oi3CBI8rP6U"
+        }
+
+
     ]
 
     const types = ['Tous', 'Article', 'Podcast', 'Infographie', 'Événement']
@@ -119,7 +174,7 @@ function F06_Blog() {
                                 <article
                                     key={a.id}
                                     className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 flex-col"
-                                    style={{ animationDelay: `${idx * 80} ms` }}
+                                    style={{ animationDelay: `${idx * 80}ms` }}
                                 >
                                     {/* IMAGE */}
                                     <div className="relative h-48 overflow-hidden">
@@ -128,9 +183,7 @@ function F06_Blog() {
                                             alt={a.titre}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                         />
-                                        <div
-                                            className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
-                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
 
                                         {/* BADGES */}
                                         <div className="absolute top-4 left-4 flex gap-2">
@@ -164,13 +217,26 @@ function F06_Blog() {
                                             {a.excerpt}
                                         </p>
 
-                                        <Link
-                                            to={`/blog/${a.id}`}
-                                            className="inline-flex items-center gap-2 text-[#1FA9A2] font-semibold group-hover:gap-3 transition-all mt-auto"
-                                        >
-                                            Lire / Écouter
-                                            <ArrowRight size={18} />
-                                        </Link>
+                                        {/* CTA CONDITIONNEL */}
+                                        {a.youtubeLink ? (
+                                            <a
+                                                href={a.youtubeLink}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 text-[#1FA9A2] font-semibold group-hover:gap-3 transition-all mt-auto"
+                                            >
+                                                Regarder sur YouTube
+                                                <ExternalLink size={18} />
+                                            </a>
+                                        ) : (
+                                            <Link
+                                                to={`/blog/${a.id}`}
+                                                className="inline-flex items-center gap-2 text-[#1FA9A2] font-semibold group-hover:gap-3 transition-all mt-auto"
+                                            >
+                                                Lire / Écouter
+                                                <ArrowRight size={18} />
+                                            </Link>
+                                        )}
                                     </div>
                                 </article>
                             )
@@ -201,7 +267,7 @@ function F06_Blog() {
                     </p>
                 </div>
             </div>
-        </div >
+        </div>
     )
 }
 export default F06_Blog
