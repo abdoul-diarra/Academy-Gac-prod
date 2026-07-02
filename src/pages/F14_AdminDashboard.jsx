@@ -14,6 +14,10 @@ export default function F14_AdminDashboard() {
   const [sessions, setSessions] = useState([])
   const [inscriptions, setInscriptions] = useState([])
   const [decharges, setDecharges] = useState([])
+  const [blogArticles, setBlogArticles] = useState([])
+  const [showBlogModal, setShowBlogModal] = useState(false)
+  const [editingArticle, setEditingArticle] = useState(null)
+  const [success, setSuccess] = useState('')
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingFormation, setEditingFormation] = useState(null)
@@ -62,7 +66,7 @@ export default function F14_AdminDashboard() {
     setLoading(true)
     setError('')
 
-    const [formationsRes, sessionsRes, inscriptionsRes, dechargesRes] = await Promise.all([
+    const [formationsRes, sessionsRes, inscriptionsRes, dechargesRes, blogRes] = await Promise.all([
       supabase.from('formations').select('*').order('cree_le', { ascending: false }),
       supabase.from('sessions')
         .select(`
@@ -85,7 +89,8 @@ export default function F14_AdminDashboard() {
         .select(`id, inscription_id, numero_decharge, url_pdf, statut, created_at,
           inscription:inscriptions(id, prenom_contact, nom_contact, email_contact,
           session:sessions(formation:formations(appellation_commerciale)))`)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase.from('blog_articles').select('*').order('ordre', { ascending: true })
     ])
 
     if (formationsRes.error) setError(formationsRes.error.message)
@@ -99,8 +104,16 @@ export default function F14_AdminDashboard() {
 
     if (dechargesRes.error) setError(dechargesRes.error.message)
     else setDecharges(dechargesRes.data)
+    if (blogRes.error) setError(blogRes.error.message)
+    else setBlogArticles(blogRes.data)
+
+    //const blogRes = await supabase.from('blog_articles').select('*').order('ordre', { ascending: true })
+    //if (blogRes.error) setError(blogRes.error.message)
+    //else setBlogArticles(blogRes.data)
 
     setLoading(false)
+
+
   }
 
   const handleCreateFormation = async () => {
@@ -248,46 +261,7 @@ export default function F14_AdminDashboard() {
     }
   }
 
-  const handleValiderDecharge = async (dechargeId, inscriptionId) => {
-    try {
-      // 1. Récupère les données de l'inscription + étudiant
-      const { data: decharge } = await supabase
-        .from('decharges')
-        .select(', inscriptions(, etudiants(*))')
-        .eq('id', dechargeId)
-        .single()
 
-      // 2. Génère le PDF en mémoire
-      const pdfBlob = await generateDechargePDF(decharge)
-
-      // 3. Upload dans Supabase Storage
-      const fileName = `decharge-${dechargeId}.pdf `
-      const { error: uploadError } = await supabase.storage
-        .from('decharges')
-        .upload(fileName, pdfBlob, { upsert: true })
-
-      if (uploadError) throw uploadError
-
-      // 4. Récupère l'URL publique
-      const { data: { publicUrl } } = supabase.storage
-        .from('decharges')
-        .getPublicUrl(fileName)
-
-      // 5. Update la DB avec statut + URL
-      const { error } = await supabase
-        .from('decharges')
-        .update({ statut: 'valide', pdf_url: publicUrl })
-        .eq('id', dechargeId)
-
-      if (error) throw error
-
-      setSuccess('Décharge validée et envoyée à l’étudiant')
-      fetchDecharges() // refresh la liste
-
-    } catch (err) {
-      setError(err.message)
-    }
-  }
 
   const handleEditDecharge = async (decharge) => {
     const newStatut = prompt('Nouveau statut: en_attente, valide, refuse', decharge.statut)
@@ -303,20 +277,25 @@ export default function F14_AdminDashboard() {
     if (error) setError(error.message)
     else fetchAllData()
   }
+  const handleDeleteInscription = async (id) => {
+    if (!confirm('Supprimer cette inscription?')) return
+    const { error } = await supabase.from('inscriptions').delete().eq('id', id)
+    if (error) setError(error.message)
+    else fetchAllData()
+  }
+
+
 
   const handleConfirmerDecharge = async (decharge) => {
     try {
       setError('')
 
-      // 1. Passe la décharge en valide
       const { error: updateError } = await supabase
         .from('decharges')
         .update({ statut: 'valide' })
         .eq('id', decharge.id)
-
       if (updateError) throw updateError
 
-      // 2. Génère le PDF en blob, pas en fichier
       const doc = new jsPDF()
       const nomComplet = `${decharge.inscription?.prenom_contact} ${decharge.inscription?.nom_contact}`
 
@@ -330,29 +309,19 @@ export default function F14_AdminDashboard() {
       doc.text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, 20, 110)
 
       const pdfBlob = doc.output('blob')
-
-      // 3. Upload dans Storage
       const fileName = `decharge-${decharge.numero_decharge}.pdf`
+
       const { error: uploadError } = await supabase.storage
         .from('decharges')
-        .upload(fileName, pdfBlob, {
-          contentType: 'application/pdf',
-          upsert: true
-        })
-
+        .upload(fileName, pdfBlob, { contentType: 'application/pdf', upsert: true })
       if (uploadError) throw uploadError
 
-      // 4. Récupère l'URL publique
-      const { data: { publicUrl } } = supabase.storage
-        .from('decharges')
-        .getPublicUrl(fileName)
+      const { data: { publicUrl } } = supabase.storage.from('decharges').getPublicUrl(fileName)
 
-      // 5. Update la DB avec l'URL
       const { error: urlError } = await supabase
         .from('decharges')
-        .update({ url_pdf: publicUrl })
+        .update({ url_pdf: publicUrl }) // <- url_pdf partout
         .eq('id', decharge.id)
-
       if (urlError) throw urlError
 
       alert('Décharge validée et PDF généré')
@@ -362,6 +331,8 @@ export default function F14_AdminDashboard() {
       setError(err.message)
     }
   }
+
+  // 3. SUPPRIME fetchBlogArticles ENTIEREMENT
 
   if (loading) {
     return (
@@ -387,7 +358,7 @@ export default function F14_AdminDashboard() {
       {error && <div className="mb-4 p-4 bg-red-50 text-red-800 rounded-lg">{error}</div>}
 
       <div className="border-b-2 border-[#1FA9A2] mb-6 overflow-x-auto">
-        {['formations', 'sessions', 'inscriptions', 'decharges'].map(tab => (
+        {['formations', 'sessions', 'inscriptions', 'decharges', 'blog'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -619,6 +590,43 @@ export default function F14_AdminDashboard() {
           </div>
         </div>
       )}
+      {/* BLOG */}
+      {activeTab === 'blog' && (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-[#0F3D3E]">Blog & Ressources</h2>
+            <button onClick={() => { setEditingArticle({ titre: '', date: '', tag: 'POLICY IMPACT LAB', type: 'Podcast', excerpt: '', image_url: '', read_time: '', youtube_link: '', ordre: blogArticles.length, actif: true }); setShowBlogModal(true) }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#8DC63F] text-[#0F3D3E] rounded-lg font-semibold">
+              <Plus size={18} /> Nouvel Article
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#0F3D3E] text-white">
+                <tr><th className="p-3 text-left">Titre</th><th className="p-3 text-left">Tag</th><th className="p-3 text-left">Type</th><th className="p-3 text-left">Statut</th><th className="p-3 text-left">Actions</th></tr>
+              </thead>
+              <tbody>
+                {blogArticles.map(a => (
+                  <tr key={a.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-semibold">{a.titre}</td>
+                    <td className="p-3 text-sm">{a.tag}</td>
+                    <td className="p-3 text-sm">{a.type}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded text-xs ${a.actif ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {a.actif ? 'Actif' : 'Masqué'}
+                      </span>
+                    </td>
+                    <td className="p-3 flex gap-2">
+                      <button onClick={() => { setEditingArticle(a); setShowBlogModal(true) }} className="p-2 bg-[#1FA9A2] text-white rounded hover:bg-[#0F3D3E]"><Edit size={16} /></button>
+                      <button onClick={async () => { if (confirm('Supprimer?')) { await supabase.from('blog_articles').delete().eq('id', a.id); fetchAllData() } }} className="p-2 bg-red-600 text-white rounded hover:bg-red-700"><Trash2 size={16} /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* MODAL FORMATION */}
       {showEditModal && editingFormation && (
@@ -714,6 +722,41 @@ export default function F14_AdminDashboard() {
             <div className="flex gap-3 justify-end mt-6">
               <button onClick={() => setShowNewInscription(false)} className="px-4 py-2 bg-gray-600 text-white rounded-lg">Annuler</button>
               <button onClick={handleCreateInscription} className="px-4 py-2 bg-[#8DC63F] text-[#0F3D3E] rounded-lg font-semibold">Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL BLOG */}
+      {showBlogModal && editingArticle && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto space-y-3">
+            <h3 className="text-xl font-bold">{editingArticle.id ? 'Modifier' : 'Nouvel'} Article</h3>
+            <input placeholder="Titre *" value={editingArticle.titre || ''} onChange={e => setEditingArticle({ ...editingArticle, titre: e.target.value })} className="w-full p-3 border rounded-lg" />
+            <div className="grid grid-cols-2 gap-3">
+              <input placeholder="Date ex: 22 mai 2026" value={editingArticle.date || ''} onChange={e => setEditingArticle({ ...editingArticle, date: e.target.value })} className="p-3 border rounded-lg" />
+              <input placeholder="Temps lecture ex: 5 min" value={editingArticle.read_time || ''} onChange={e => setEditingArticle({ ...editingArticle, read_time: e.target.value })} className="p-3 border rounded-lg" />
+              <select value={editingArticle.tag || ''} onChange={e => setEditingArticle({ ...editingArticle, tag: e.target.value })} className="p-3 border rounded-lg">
+                <option value="">Pôle</option>{['DATA SCIENCE FACTORY', 'POLICY IMPACT LAB', 'STRATEGY & DELIVERY', 'ECONOMICS POWER HUB', 'LEADERSHIP & VOICE'].map(t => <option key={t}>{t}</option>)}
+              </select>
+              <select value={editingArticle.type || 'Podcast'} onChange={e => setEditingArticle({ ...editingArticle, type: e.target.value })} className="p-3 border rounded-lg">
+                {['Article', 'Podcast', 'Infographie', 'Événement'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <input placeholder="URL Image YouTube thumbnail" value={editingArticle.image_url || ''} onChange={e => setEditingArticle({ ...editingArticle, image_url: e.target.value })} className="w-full p-3 border rounded-lg" />
+            <input placeholder="Lien YouTube" value={editingArticle.youtube_link || ''} onChange={e => setEditingArticle({ ...editingArticle, youtube_link: e.target.value })} className="w-full p-3 border rounded-lg" />
+            <textarea placeholder="Résumé/Excerpt" value={editingArticle.excerpt || ''} onChange={e => setEditingArticle({ ...editingArticle, excerpt: e.target.value })} className="w-full p-3 border rounded-lg" rows="3" />
+            <input type="number" placeholder="Ordre d'affichage" value={editingArticle.ordre || 0} onChange={e => setEditingArticle({ ...editingArticle, ordre: parseInt(e.target.value) || 0 })} className="w-full p-3 border rounded-lg" />
+            <label className="flex items-center gap-2"><input type="checkbox" checked={editingArticle.actif} onChange={e => setEditingArticle({ ...editingArticle, actif: e.target.checked })} /> Article actif/visible</label>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button onClick={() => setShowBlogModal(false)} className="px-4 py-2 bg-gray-600 text-white rounded-lg">Annuler</button>
+              <button onClick={async () => {
+                const { error } = editingArticle.id
+                  ? await supabase.from('blog_articles').update(editingArticle).eq('id', editingArticle.id)
+                  : await supabase.from('blog_articles').insert([editingArticle])
+                if (error) setError(error.message)
+                else { setShowBlogModal(false); setEditingArticle(null); fetchAllData() }
+              }} className="px-4 py-2 bg-[#8DC63F] text-[#0F3D3E] rounded-lg font-semibold">Enregistrer</button>
             </div>
           </div>
         </div>

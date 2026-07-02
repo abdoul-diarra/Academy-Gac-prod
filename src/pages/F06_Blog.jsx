@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Clock, ArrowRight, Filter, Headphones, FileText, BarChart3, ExternalLink } from 'lucide-react'
+import { Clock, ArrowRight, Filter, Headphones, FileText, BarChart3, ExternalLink, Loader2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const POLES_COLOR = {
     'DATA SCIENCE FACTORY': '#8DC63F',
@@ -19,104 +20,27 @@ const TYPE_ICON = {
 
 function F06_Blog() {
     const [filterType, setFilterType] = useState('Tous')
+    const [articles, setArticles] = useState([])
+    const [loading, setLoading] = useState(true)
 
-    const articles = [
-        {
-            id: 1,
-            titre: "Les Échos de l'Éco #XX : Titre de la vidéo",
-            date: "22 mai 2026",
-            tag: "POLICY IMPACT LAB",
-            type: "Podcast",
-            excerpt: "Résumé court de la vidéo pour donner envie de cliquer. Change ça avec le vrai sujet de la vidéo.",
-            image: "https://img.youtube.com/vi/ZXkvIX37nrY/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/ZXkvIX37nrY"
-        },
-        {
-            id: 2,
-            titre: "Vidéo GAC #4",
-            date: "22 mai 2026",
-            tag: "ECONOMICS POWER HUB",
-            type: "Podcast",
-            excerpt: "Remplace par le résumé de la vidéo",
-            image: "https://img.youtube.com/vi/7S__44lwJEM/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/7S__44lwJEM"
-        },
+    useEffect(() => {
+        const fetchArticles = async () => {
+            const { data, error } = await supabase
+                .from('blog_articles')
+                .select('*')
+                .eq('actif', true)
+                .order('ordre', { ascending: true })
+                .order('created_at', { ascending: false })
 
-
-        {
-            id: 3,
-            titre: "Titre de la vidéo",
-            date: "22 mai 2026",
-            tag: "POLICY IMPACT LAB",
-            type: "Podcast",
-            excerpt: "Résumé court de la vidéo",
-            image: "https://img.youtube.com/vi/Vv4TUHMJ9RY/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/Vv4TUHMJ9RY"
-        },
-        {
-            id: 5,
-            titre: "Vidéo GAC #1",
-            date: "22 mai 2026",
-            tag: "POLICY IMPACT LAB",
-            type: "Podcast",
-            excerpt: "Remplace par le résumé de la vidéo",
-            image: "https://img.youtube.com/vi/y1c_onSU3zo/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/y1c_onSU3zo"
-        },
-        {
-            id: 3,
-            titre: "Titre de la vidéo",
-            date: "22 mai 2026",
-            tag: "POLICY IMPACT LAB",
-            type: "Podcast",
-            excerpt: "Résumé court de la vidéo",
-            image: "https://img.youtube.com/vi/ty-K8SgqhQ8/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/ty-K8SgqhQ8"
-        },
-
-        {
-            id: 6,
-            titre: "Vidéo GAC #3",
-            date: "22 mai 2026",
-            tag: "STRATEGY & DELIVERY",
-            type: "Podcast",
-            excerpt: "Remplace par le résumé de la vidéo",
-            image: "https://img.youtube.com/vi/Tkp5JtV1NhE/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/Tkp5JtV1NhE"
-        },
-
-        {
-            id: 7,
-            titre: "Vidéo GAC #2",
-            date: "22 mai 2026",
-            tag: "DATA SCIENCE FACTORY",
-            type: "Podcast",
-            excerpt: "Remplace par le résumé de la vidéo",
-            image: "https://img.youtube.com/vi/6nVnz_uqCE8/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/6nVnz_uqCE8"
-        },
-
-        {
-            id: 8,
-            titre: "Titre de la vidéo",
-            date: "22 mai 2026",
-            tag: "POLICY IMPACT LAB",
-            type: "Podcast",
-            excerpt: "Résumé court de la vidéo",
-            image: "https://img.youtube.com/vi/oi3CBI8rP6U/maxresdefault.jpg",
-            readTime: "XX min",
-            youtubeLink: "https://youtu.be/oi3CBI8rP6U"
+            if (error) {
+                console.error('Erreur fetch articles:', error)
+            } else {
+                setArticles(data || [])
+            }
+            setLoading(false)
         }
-
-
-    ]
+        fetchArticles()
+    }, [])
 
     const types = ['Tous', 'Article', 'Podcast', 'Infographie', 'Événement']
     const filteredArticles = filterType === 'Tous'
@@ -126,7 +50,7 @@ function F06_Blog() {
     return (
         <div className="bg-gray-50 min-h-screen">
 
-            {/* HERO */}
+            {/* HERO - Bloc en dur pour l'instant */}
             <section className="bg-white border-b">
                 <div className="container mx-auto px-4 py-16">
                     <div className="max-w-3xl">
@@ -158,8 +82,13 @@ function F06_Blog() {
                     ))}
                 </div>
 
-                {/* GRID ARTICLES */}
-                {filteredArticles.length === 0 ? (
+                {/* LOADING / VIDE / GRID */}
+                {loading ? (
+                    <div className="text-center py-20">
+                        <Loader2 size={48} className="mx-auto text-[#1FA9A2] animate-spin mb-4" />
+                        <p className="text-gray-500">Chargement des articles...</p>
+                    </div>
+                ) : filteredArticles.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-2xl">
                         <Filter size={48} className="mx-auto text-gray-300 mb-4" />
                         <p className="text-gray-500">Aucun contenu pour ce filtre</p>
@@ -176,20 +105,17 @@ function F06_Blog() {
                                     className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 flex-col"
                                     style={{ animationDelay: `${idx * 80}ms` }}
                                 >
-                                    {/* IMAGE */}
                                     <div className="relative h-48 overflow-hidden">
                                         <img
-                                            src={a.image}
+                                            src={a.image_url}
                                             alt={a.titre}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
-                                        {/* BADGES */}
                                         <div className="absolute top-4 left-4 flex gap-2">
                                             <span
                                                 className="text-xs font-bold text-white px-3 py-1.5 rounded-full backdrop-blur-sm"
-                                                style={{ backgroundColor: `${color}CC ` }}
+                                                style={{ backgroundColor: `${color}CC` }}
                                             >
                                                 {a.tag}
                                             </span>
@@ -198,29 +124,25 @@ function F06_Blog() {
                                                 {a.type}
                                             </span>
                                         </div>
-
-                                        {/* TEMPS DE LECTURE */}
-                                        <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
-                                            {a.readTime}
-                                        </div>
+                                        {a.read_time && (
+                                            <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
+                                                {a.read_time}
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* CONTENU */}
                                     <div className="p-6 flex-1 flex-col">
                                         <div className="text-xs text-gray-500 mb-2">{a.date}</div>
-
                                         <h2 className="text-xl font-bold text-[#0F3D3E] mb-3 line-clamp-2 group-hover:text-[#1FA9A2] transition-colors">
                                             {a.titre}
                                         </h2>
-
                                         <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-1">
                                             {a.excerpt}
                                         </p>
 
-                                        {/* CTA CONDITIONNEL */}
-                                        {a.youtubeLink ? (
+                                        {a.youtube_link ? (
                                             <a
-                                                href={a.youtubeLink}
+                                                href={a.youtube_link}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center gap-2 text-[#1FA9A2] font-semibold group-hover:gap-3 transition-all mt-auto"
@@ -244,7 +166,7 @@ function F06_Blog() {
                     </div>
                 )}
 
-                {/* NEWSLETTER CTA */}
+                {/* NEWSLETTER CTA - Bloc en dur */}
                 <div className="mt-16 bg-gradient-to-r from-[#0F3D3E] to-[#1FA9A2] rounded-3xl p-8 md:p-12 text-white text-center">
                     <h3 className="text-2xl md:text-3xl font-bold mb-4">
                         Ne ratez aucun contenu

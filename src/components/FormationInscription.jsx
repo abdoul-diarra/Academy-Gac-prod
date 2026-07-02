@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/const handleDeleteInscription '
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 export default function FormationInscription({ formation, session }) {
