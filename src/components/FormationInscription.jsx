@@ -17,7 +17,7 @@ export default function FormationInscription({ formation, session }) {
     }, [])
 
     const fetchUserData = async () => {
-        const { data: { user } = await supabase.auth.getUser()
+        const { data: { user }} = await supabase.auth.getUser()
         if (!user) return
 
         // Récupère téléphone depuis profiles en priorité
