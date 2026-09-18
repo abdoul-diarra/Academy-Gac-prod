@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { TrendingUp, Users, Award, ArrowRight, CheckCircle, Sparkles } from 'lucide-react'
+import { TrendingUp, Users, Award, ArrowRight, CheckCircle, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const POLES_META = {
@@ -35,6 +35,135 @@ const POLES_META = {
         code: 'leadership-voice-institute'
     }
 }
+
+// ─────────────────────────────────────────────
+// CARROUSEL DE FORMATIONS (une image à la fois, flèches + points)
+// ─────────────────────────────────────────────
+function FormationsCarousel({ items }) {
+    const [index, setIndex] = useState(0)
+    const timerRef = useRef(null)
+
+    const goTo = (i) => {
+        if (items.length === 0) return
+        const next = (i + items.length) % items.length
+        setIndex(next)
+    }
+
+    const next = () => goTo(index + 1)
+    const prev = () => goTo(index - 1)
+
+    // Défilement automatique toutes les 4 secondes
+    useEffect(() => {
+        if (items.length <= 1) return
+        timerRef.current = setInterval(() => {
+            setIndex((prev) => (prev + 1) % items.length)
+        }, 4000)
+        return () => clearInterval(timerRef.current)
+    }, [items.length])
+
+    if (!items || items.length === 0) return null
+
+    return (
+        <div
+            className="relative w-full h-[70vh] min-h-[420px] md:h-[650px] overflow-hidden bg-black"
+            onMouseEnter={() => clearInterval(timerRef.current)}
+            onMouseLeave={() => {
+                timerRef.current = setInterval(() => {
+                    setIndex((prev) => (prev + 1) % items.length)
+                }, 4000)
+            }}
+        >
+            {/* Piste d'images qui glisse horizontalement */}
+            <div
+                className="absolute inset-0 flex transition-transform duration-700 ease-in-out"
+                style={{ transform: `translateX(-${index * 100}%)` }}
+            >
+                {items.map((item, i) => (
+                    <div key={item.id ?? i} className="relative w-full h-full flex-shrink-0">
+                        <img
+                            src={item.image_url}
+                            alt={item.titre || 'Formation GAC Academy'}
+                            className="w-full h-full object-cover"
+                        />
+                        {/* Voile sombre pour faire ressortir le texte, comme cabinetgac.com */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+
+                        {/* Gros texte par-dessus */}
+                        <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-16">
+                            <div className="max-w-4xl">
+                                <p className="text-[#8DC63F] font-bold tracking-widest text-sm md:text-base mb-3 uppercase">
+                                    Pôle de formation
+                                </p>
+                                <h3 className="text-white font-extrabold uppercase leading-[1.05] text-4xl sm:text-5xl md:text-7xl">
+                                    {item.titre}
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Flèches */}
+            <button
+                onClick={prev}
+                aria-label="Formation précédente"
+                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 backdrop-blur-sm text-white rounded-full p-3 transition-all"
+            >
+                <ChevronLeft size={28} />
+            </button>
+            <button
+                onClick={next}
+                aria-label="Formation suivante"
+                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/25 backdrop-blur-sm text-white rounded-full p-3 transition-all"
+            >
+                <ChevronRight size={28} />
+            </button>
+
+            {/* Points de navigation */}
+            <div className="absolute bottom-6 md:bottom-10 left-6 md:left-16 flex gap-2">
+                {items.map((_, i) => (
+                    <button
+                        key={i}
+                        onClick={() => goTo(i)}
+                        aria-label={`Aller à l'image ${i + 1}`}
+                        className={`h-1.5 rounded-full transition-all ${i === index ? 'w-10 bg-[#8DC63F]' : 'w-5 bg-white/50 hover:bg-white/80'}`}
+                    />
+                ))}
+            </div>
+        </div>
+    )
+}
+
+// Images des formations codées en dur.
+// Place les fichiers correspondants dans public/images/formations/ avec ces noms exacts
+// (ou change les chemins ci-dessous si tes fichiers ont un autre nom).
+const FORMATIONS_IMAGES = [
+    {
+        id: 1,
+        titre: 'Policy Impact Lab',
+        image_url: '/images/policy-impact-lab.jpg'
+    },
+    {
+        id: 2,
+        titre: 'Economics Power Hub',
+        image_url: '/images/economics-power-hub.jpg'
+    },
+    {
+        id: 3,
+        titre: 'Strategy & Delivery Academy',
+        image_url: '/images/strategy-delivery-academy.jpg'
+    },
+    {
+        id: 4,
+        titre: 'Data Science Factory',
+        image_url: '/images//data-science-factory.jpg'
+    },
+    {
+        id: 5,
+        titre: 'Leadership & Voice Institute',
+        image_url: '/images/leadership-voice-institute.jpg'
+    }
+]
 
 export default function F01_Accueil() {
     const [polesData, setPolesData] = useState([])
@@ -119,6 +248,11 @@ export default function F01_Accueil() {
                         ))}
                     </div>
                 </div>
+            </section>
+
+            {/* CARROUSEL DES FORMATIONS — plein écran, style bannière */}
+            <section>
+                <FormationsCarousel items={FORMATIONS_IMAGES} />
             </section>
 
             {/* MOT DU DG */}
